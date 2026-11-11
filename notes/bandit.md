@@ -1,0 +1,17 @@
+first
+cat readme   password:6y2kwnwK6grgvwvpvLaa2T1cpFEKOhNR
+
+level 1-2	password:PK8fYLZg2hnHSz83plBL1iEPKdD3QToB
+cat ./-	在文件名是-这种特殊字后,需要用./来告诉其后面这个是文件,就是创造一个绝对路径
+
+level2-3 password:7ZZ2LFrykP2zEyvBl4m3clcL7tGYJPME
+转义符的使用,文件名中带空格,可以用\也可以直接"".
+
+level3-4	password:xzTXq1rDJQVVAzdv5cHq1TQytTWufAMq
+在隐藏文件夹中可以使用ls -a来查看所有文件,.开头的就是隐藏文件
+
+level4-5	password:6C7h9GD8M6ai5nr7wo1RonrzFjj9yIrG
+只有一个文件是可读的,可以用file *来判断文件类型,注意文件开头如果是 - 等记得./
+
+level5-6	password:pXa26xhMWaC2SvDotA4r9EgZkulOeSBW
+给出了很多线索条件,用类似于 -type .-size . ! -executable 诸如此类条件筛选
