@@ -45,3 +45,32 @@
 - **学到**：`find` 可以组合过滤；注意 `file` 不支持这些参数，筛选要用 `find`对于`2>dev/null`linux有三个默认流
 - 0:标准输出stdin(键盘输入);1:标准输出stdout(正常结果).2:标准错误stderr(报错信息).`/dev/null`相当于linux的黑洞
 - 写进的数据直接丢掉不保存不显示.所以整体就是把错误流>(定向)黑洞
+
+- ## Level 7 → 8
+- **目标**：找出存在某个固定单词旁的密码.
+- **命令**：`grep millionth data.txt;`
+- **密码**：`VR1ljMayciFxbnUokuQmJFw6QC9VKtub`
+- **学到**：`grep`全局正则打印,在文本中找到关键词的行.去找关键词打印出来就行
+
+- ## Level 8 → 9
+- **目标**：密码存于data.txt并且是只出现一次的文本行
+- **命令**：`sort data.txt | uniq -c;`
+- **密码**：`EjmOSvuAu7sGAHqHVcBDPirRe9T03kxl`
+  - **学到**：`uniq`只能判断相邻重复所以必须要先`sort`按字母排序,然后再去识别.其次后面是 
+  - `-u`就是打印出唯一出现的一行.
+  - `d`只输出重复行
+  - `c`统计每一行的重复次数,在前面打印出来+内容
+  - `uniq`重复行只保留一份,全部打印出来
+
+- ## Level 9 → 10
+- **目标**：密码存在data.txt ,是少数几个人类可读的字符串之一,前面几个===字符.
+- **命令**：`strings data.txt | grep === ;`
+- **密码**：`B0s2khmbT9u0geKuOoVGW3JZKhndE3BG`
+- **学到**：直接`cat`里面都是二进制乱码会崩溃,所以用`strings`提取里面人类可读的字符串.再由`|`管道传给下一个grep去找关键词.
+
+- ## Level 10 → 11
+- **目标**：密码所在文件包含base64编码数据.
+- **命令**：`base64 -d data.txt;`
+- **密码**：`pYfOY6HwUsDj5rL9UvyhU7MCmv8vN5Ro`
+- **学到**：将`data.txt`文件解码用`base64 -d`,它会读取文件里的 base64 字符串，输出明文密码
+- 更直观的写法应该是`cat data.txt | base64 -d`
