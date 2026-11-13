@@ -74,3 +74,68 @@
 - **密码**：`pYfOY6HwUsDj5rL9UvyhU7MCmv8vN5Ro`
 - **学到**：将`data.txt`文件解码用`base64 -d`,它会读取文件里的 base64 字符串，输出明文密码
 - 更直观的写法应该是`cat data.txt | base64 -d`
+
+## Level 11 → 12
+
+- **目标**：文件内容是 A-Z 字母整体移位 13 位（ROT13），需要还原
+- **命令**：`cat data.txt | tr 'A-Za-z' 'N-ZA-Mn-za-m'`
+- **密码**：`GROozWP08QyN0mGrjUkIDOWCYkZiQxrN`
+- **学到**：
+  - `tr` 是**字符逐一替换**：第一个集合的每个字符映射到第二个集合对应位置的字符
+  - `'A-Za-z'` 是全部大小写字母，`'N-ZA-M'` 是"从 N 开始绕回"的映射
+  - ROT13 移位 13 位，做两次会变回原文（13+13=26），所以加密解密是同一个命令
+
+## Level 12 → 13
+
+- **目标**：`data.txt` 被反复压缩了几十层，需要一层层解开
+- **命令**：
+  1. 先手动还原第一层二进制：`xxd -r data.txt > data.bin && mv data.bin data.txt`
+  2. 再用循环自动解剩下的层：`while true; do ... case ... esac; done`
+- **密码**：`qQYqihO8P8RzR6iqxYqX45quvihF2uzk`
+- **学到**：
+
+  **① 判断当前是哪一层**
+
+  | 手段 | 用法 | 说明 |
+  |---|---|---|
+  | `file -b 文件` | `file -b data.txt` | 靠**文件头魔数**判断类型 |
+  | 魔数 | `1f 8b`=gzip，`42 5a 68`=bzip2，`50 4b 03 04`=zip，`fd 37 7a 58 5a`=xz，`ustar`=tar | `xxd data.txt \| head -1` 就能看到 |
+
+  **② 解压时统一输出到屏幕（配合 `>` 就不用反复改名）**
+
+  | 类型 | 命令 |
+  |---|---|
+  | gzip | `gunzip -c f > next` |
+  | bzip2 | `bunzip2 -c f > next` |
+  | xz | `xz -dc f > next` |
+  | zip | `unzip -p f > next` |
+  | tar | `tar -xOf f > next` |
+  | hexdump | `xxd -r f > next` |
+
+  **③ 两个容易搞混的点**
+  - `gunzip`/`bunzip2`/`unxz` 名字自带"解压"，只需 `-c`；`xz`/`gzip`/`bzip2` **默认压缩**，要 `-d` 才是解压
+  - `tar` 的 `-c` 是 **create（创建归档）**，不是输出到屏幕；输出到屏幕是 `-O`（大写）
+
+  **④ 为什么 `ASCII text` 不等于"到底了"**
+  - hexdump 和 base64 的内容**本身就是 ASCII 文本**，`file` 会把它们识别成 `ASCII text`
+  - 所以判断顺序应该是：先看内容特征（`^[0-9a-f]{8}:` 像 hexdump），再看 `file` 的压缩格式，最后才是"没有匹配 = 到底了"
+
+- **顺带学到的命令**（不是这关核心）
+  - `mkdir -p 目录`：`-p`（parent）父目录不存在时一起创建，且目录已存在不报错
+  - `cp 源 目标`：`cp ~/data.txt .` 表示从家目录拷贝到当前目录（`.` = 当前目录）
+  - `mktemp -d`：创建随机名的临时目录，返回完整路径
+
+- ## Level 13 → 14
+- **目标**：手上有一个叫 sshkey.private 的私钥，用它登录到下一个账号 bandit14.
+- **命令**：
+  1.  `cat sshkey.private`然后复制里面的所有信息
+  2.   先到本地虚拟机上创建一个文件将所有东西粘贴进去然后.`chmod 600 sshkey.private`
+  3.   然后用密钥登录.`ssh -i 密钥所在文件 用户名@主机 -p 端口`
+  4.   最后`cat /etc/bandit_pass/bandit14`得到密码
+- **密码**：`aaWecNkG4FhxJQxz07uiwzVP6bJiYS65`
+- **学到**：服务器存公钥（authorized_keys），本地存私钥
+- 登录时服务器发挑战，客户端用私钥签名回应
+- 私钥从不离开本机 → 泄露私钥 = 身份被盗
+- ② 为什么必须 chmod 600
+- SSH 会主动检查：私钥若 group/other 可读，直接拒用并报 Permissions 0644 ... are too open
+- 逻辑：别人能读 = 别人能复制 = 别人能冒充你
