@@ -139,3 +139,9 @@
 - ② 为什么必须 chmod 600
 - SSH 会主动检查：私钥若 group/other 可读，直接拒用并报 Permissions 0644 ... are too open
 - 逻辑：别人能读 = 别人能复制 = 别人能冒充你
+
+- ## Level 14 → 15
+- **目标**：将当前关卡密码给localhost 30000获取下一层秘密.
+- **命令**：`echo "这里粘贴你bandit14的密码" | nc localhost 30000;`
+- **密码**：`pbLYuZtTg4MgaqfJx8jbA9gKKGqM68A7`
+- **学到**：`nc`称之为网络瑞士军刀,作用就是建立 TCP 连接，往端口发文本.
