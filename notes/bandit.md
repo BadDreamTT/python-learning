@@ -145,3 +145,46 @@
 - **命令**：`echo "这里粘贴你bandit14的密码" | nc localhost 30000;`
 - **密码**：`pbLYuZtTg4MgaqfJx8jbA9gKKGqM68A7`
 - **学到**：`nc`称之为网络瑞士军刀,作用就是建立 TCP 连接，往端口发文本.
+
+## Level 15 → 16
+
+- **目标**：把 bandit15 的密码发给本机 30001 端口，服务返回下一关密码
+- **命令**：
+  ```bash
+  ssh bandit15@bandit.labs.overthewire.org -p 2220
+  openssl s_client -connect localhost:30001
+  # 连上后输入 bandit15 的密码，回车
+  ```
+- **密码**：`kS0Hf0u5HiXFwKMKFqXvPdOTNGGa0X8V`
+- **学到**：
+
+  **① 为什么 `nc` 不行**
+  - 这个端口要求 **TLS 加密**连接，`nc` 发的是明文，直接被服务端拒绝/断开
+  - 对比 14→15 那关的 30000 端口：**同样的操作，但一个要加密、一个不用**
+
+  **② `openssl s_client` 是什么**
+  - 一个**手动的 TLS 客户端**：连上后先做完整 TLS 握手，再让你像普通键盘一样发数据
+  - 常用参数：
+    | 参数 | 作用 |
+    |---|---|
+    | `-connect host:port` | 连接目标 |
+    | `-servername 域名` | SNI，告诉服务器要哪个证书（HTTPS 用） |
+    | `-quiet` | 减少握手日志的刷屏 |
+
+  **③ 连接时你会看到什么**
+  ```
+  CONNECTED(00000003)
+  ---
+  Certificate chain
+   i:...                      ← 服务器证书（自签的，所以会提示 verify error）
+  ---
+  SSL handshake has read ... bytes
+  New, TLSv1.3, Cipher is TLS_AES_256_GCM_SHA384
+  ```
+  - 出现 `verify error: self signed certificate` **不用管**，这是自签证书，只影响身份验证、不影响加密
+  - `Cipher is ...` 就是双方协商出来的加密算法
+
+  **④ 判断"这关需要什么协议"**
+  - 连不上 / 一进去就被断开 → 试 `openssl s_client`
+  - `nc` 能连但没反应 → 可能要发特定格式
+  - 这题的经验：**端口号不同，要求的协议可能不同**，安全题里很常见
