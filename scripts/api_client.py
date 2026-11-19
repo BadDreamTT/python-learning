@@ -18,6 +18,11 @@ class ApiClient:
     def post(self, path: str, **kwargs) -> requests.Response:
         return self.session.post(self.base_url + path, timeout=self.timeout, **kwargs)
 
+    def _url(self, path: str) -> str:
+        if not path.startswith("/"):
+            path = "/" + path
+        return self.base_url + path
+
 
 if __name__ == "__main__":
     # 模块自测：直接运行本文件时执行，被 import 时不执行
