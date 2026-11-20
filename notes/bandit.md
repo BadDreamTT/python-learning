@@ -233,3 +233,49 @@
   - `nmap` 没装 → `sudo apt install nmap`（Bandit 服务器已装好）
   - 用 `nc` 连 open 端口没反应 → 因为是 TLS 服务，必须用 `openssl s_client`
   - 试了 3~4 个端口才找到 → 正常，这关就是这么设计的
+
+## Level 17 → 18
+
+- **目标**：两个密码文件，只有一行不同，找出新文件里那一行
+- **命令**：
+  ```bash
+  ssh bandit17@bandit.labs.overthewire.org -p 2220
+  diff passwords.old passwords.new
+  ```
+- **密码**：`OQxXZjELndr90zuhOTDYBEomI0SZITXI`
+- **学到**：
+
+  **① `diff` 的输出怎么读**
+  ```
+  42c42
+  < 旧文件这一行的内容
+  ---
+  > 新文件这一行的内容
+  ```
+  - `42c42` = 第 42 行有 change（旧第 42 行 → 新第 42 行）
+  - `<` 表示**只存在于第一个文件**
+  - `>` 表示**只存在于第二个文件** ← 这关要的就是它
+
+  **② 其他"找差异"的写法**（都能解这题）
+  ```bash
+  # 只看新文件独有的行
+  comm -13 passwords.old passwords.new     # 需要先排序
+
+  # 反向过滤：去掉旧文件里出现过的行
+  grep -vxF -f passwords.old passwords.new
+  ```
+
+  **③ 常见参数**
+  | 参数 | 作用 |
+  |---|---|
+  | `diff -u a b` | 统一格式（unified diff，git 用的就是这种） |
+  | `diff -y a b` | 左右并排显示 |
+  | `diff -q a b` | 只说明"是否不同" |
+
+  **④ 实际用途**
+  - 比较两次配置文件改动（排查"谁改坏了"）
+  - 对比两次接口响应（测试中验证变化）
+  - `diff -u` 就是 Git 展示改动的基础格式
+
+- **踩坑记录**：
+  - 一开始看 `diff` 输出有点懵，因为默认会展示 `<` 和 `>` 两行；这关只需要 `>` 那一行
