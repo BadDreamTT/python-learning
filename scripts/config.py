@@ -1,2 +1,2 @@
-BASE_URL = "https://httpbin.org/"
+BASE_URL = "https://httpbin.org"
 TIMEOUT = 10
