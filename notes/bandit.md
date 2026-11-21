@@ -279,3 +279,74 @@
 
 - **踩坑记录**：
   - 一开始看 `diff` 输出有点懵，因为默认会展示 `<` 和 `>` 两行；这关只需要 `>` 那一行
+
+## Level 18 → 19
+
+- **目标**：密码在 `readme` 文件里，但 `.bashrc` 被改成登录即退出，正常 SSH 进不去
+- **命令**：
+  ```bash
+  ssh bandit18@bandit.labs.overthewire.org -p 2220 cat readme
+  ```
+- **密码**：`KpsOfPkcP7i1FlIExk2QEjyt6dw8dxZI`
+- **学到**：
+
+  **① SSH 不只能开 shell，还能直接执行命令**
+
+  ```bash
+  ssh 用户@主机 命令            # 执行一条就断开
+  ssh 用户@主机 "命令1 && 命令2"  # 多条用引号包起来
+  ```
+
+  **② 为什么这关这样能过**
+
+  ```
+  正常登录：连接 → 执行 .bashrc（被改成 exit）→ 立刻断开
+  执行命令：连接 → 直接跑 "cat readme" → 不进入交互 shell → .bashrc 的影响被绕过
+  ```
+
+  非交互式执行**不会加载完整登录环境**，所以坏掉的启动脚本不起作用。
+
+  **③ 实际用途**
+  - 批量运维：`ssh host "df -h"`
+  - 自动化脚本里远程执行
+  - **服务器 shell 配置坏了时的救命手段**
+  - 面试可答："SSH 除了登录还能做远程命令执行、端口转发（-L/-R）、传文件（scp/sftp）"
+
+- **踩坑记录**：
+  - 直接 `ssh bandit18@...` 登录 → 立刻断开，看起来像"密码错了"或"服务器拒绝"，实际是 `.bashrc` 在退出
+  - 判断依据：出现 `Bye bye!` 之类提示 + 连接建立成功，说明是配置问题不是网络问题
+
+## Level 19 → 20
+
+- **目标**：`/etc/bandit_pass/bandit20` 只有 bandit20 能读，你是 bandit19，需要"借身份"读取
+- **命令**：
+  ```bash
+  ssh bandit19@bandit.labs.overthewire.org -p 2220
+
+  ls -l                                  # 找到 -rwsr-xr-x、属主 bandit20 的 bandit20-do
+  ./bandit20-do                          # 先看它自己的用法提示（会给出示例 whoami）
+  ./bandit20-do whoami                   # 验证身份切换：应输出 bandit20
+  ./bandit20-do cat /etc/bandit_pass/bandit20   # 代读密码
+  ```
+- **密码**：`4pIjcunZ0fK2vmp3IwfG8Vf7VhxD6pOA`
+- **学到**：
+
+  **① SUID 是什么**
+  ```
+  -rwsr-xr-x  bandit20  bandit19  bandit20-do
+    ↑             ↑          ↑
+    s=SUID      文件属主    文件属组
+  ```
+  - 任何人执行这个程序时，进程的**有效用户 ID（euid）会临时变成文件属主**
+  - 所以 `./bandit20-do cat xxx` 里的 `cat` 是**以 bandit20 身份**跑的
+  - 这也是 Linux **提权的经典入口**（安全方向的必修内容）
+
+  **② "代跑工具"的模式**
+  ```
+  ./bandit20-do <任意命令>
+  ```
+  - 它不关心你给什么命令，只是"用我的身份帮你执行"
+  - 先跑 `./bandit20-do whoami` 验证身份，再跑真正要执行的命令——**先验证再使用**是好习惯
+
+  **③ 必须写 `./` 的原因**
+  - 当前目录不在 `PATH` 里，直接敲 `bandit20-do`
