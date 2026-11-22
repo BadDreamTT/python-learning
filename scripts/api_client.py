@@ -24,7 +24,6 @@ class ApiClient:
                 return resp
             except requests.exceptions.Timeout as exc:
                 last_error = exc
-                logger.error("GET %s timed out (%ss)", url,self.timeout)
                 logger.warning("第 %d 次超时,准备重试", attempt)
             except requests.exceptions.ConnectionError:
                 logger.error("GET %s connection failed", url)
