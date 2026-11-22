@@ -12,20 +12,25 @@ class ApiClient:
         self.timeout = timeout
         self.session = requests.Session()      # 复用连接、自动保持 Cookie
 
-    def get(self, path: str, **kwargs) -> requests.Response:
-        url = self.base_url + path
+    def get(self, path: str, retries: int = 3,**kwargs) -> requests.Response:
+        url = self._url(path)
         logger.debug("GET %s", url)
-        try:
-            resp = self.session.get(url, timeout=self.timeout, **kwargs)
-            logger.info("GET %s -> %s", url, resp.status_code)
-            return resp
-        except requests.exceptions.Timeout:
-            logger.error("GET %s timed out (%ss)", url,self.timeout)
-            raise
-        except requests.exceptions.ConnectionError:
-            logger.error("GET %s connection failed", url)
-            raise
-
+        last_error = None
+        for attempt in range(1,retries+1):
+            try:
+                logger.debug("GET %s (第%d次)", self._url(path), attempt)
+                resp = self.session.get(url, timeout=self.timeout, **kwargs)
+                logger.info("GET %s -> %s", url, resp.status_code)
+                return resp
+            except requests.exceptions.Timeout as exc:
+                last_error = exc
+                logger.error("GET %s timed out (%ss)", url,self.timeout)
+                logger.warning("第 %d 次超时,准备重试", attempt)
+            except requests.exceptions.ConnectionError:
+                logger.error("GET %s connection failed", url)
+                raise
+        logger.error("重试 %d 次仍失败", retries)
+        raise last_error
     def post(self, path: str, **kwargs) -> requests.Response:
         return self.session.post(self.base_url + path, timeout=self.timeout, **kwargs)
 
