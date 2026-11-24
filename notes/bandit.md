@@ -364,7 +364,7 @@
   ssh bandit20@bandit.labs.overthewire.org -p 2220
   ./suconnect 1234
   ```
-- **密码**：`4pIjcunZ0fK2vmp3IwfG8Vf7VhxD6pOA`
+- **密码**：`bW9kBv5WC3P4yoDyf12LSdGuNz5ka6hY`
 - **学到**：
 
   **① TCP 通信的两个角色**
