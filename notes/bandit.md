@@ -460,3 +460,55 @@
   - `cat /tmp/xxx` 提示 No such file → cron **每分钟才跑一次**，等 1 分钟再读；或检查文件名有没有抄错（很长一串随机字符）
   - 一开始不知道从哪下手 → 记住入口永远是 `ls /etc/cron.d/`
   - 误以为要自己写脚本 → 这关是**读别人写的脚本**，找它留下的痕迹
+
+## Level 22 → 23
+
+- **目标**：cron 以 bandit23 身份运行脚本，脚本把密码写到 `/tmp/<md5值>`，需要自己算出这个文件名并读取
+- **命令**：
+  ```bash
+  ssh bandit22@bandit.labs.overthewire.org -p 2220
+
+  cat /etc/cron.d/cronjob_bandit23     # 看任务配置
+  cat /usr/bin/cronjob_bandit23.sh     # 看脚本（关键一步）
+
+  # 脚本用 md5 当文件名，自己复现一次
+  echo "I am user bandit23" | md5sum | cut -d ' ' -f 1
+  # → 得到 32 位十六进制串，如 8ca319486bfbbc3663ea0fbe81326349
+
+  cat /tmp/8ca319486bfbbc3663ea0fbe81326349    # 读密码
+  ```
+- **密码**：`（填你拿到的 bandit23 密码）`
+- **学到**：
+
+  **① 脚本里的关键三行**
+  ```bash
+  myname=$(whoami)                                          # bandit23（因为脚本以 Bandit23 身份跑）
+  mytarget=$(echo I am user $myname | md5sum | cut -d ' ' -f 1)   # 拼文件名
+  cat /etc/bandit_pass/$myname > /tmp/$mytarget             # 读密码写到 /tmp
+  ```
+
+  **② `$()` 命令替换**
+  ```bash
+  name=$(whoami)              # 把 whoami 的输出赋给变量
+  echo "当前用户是 $name"      # 使用变量
+  ```
+  - 老写法是反引号 `` `whoami` ``，`$()` 更清晰、可嵌套
+
+  **③ `md5sum` + `cut`**
+  ```bash
+  echo "abc" | md5sum              # 输出：900150983cd24fb0d6963f7d28e17f72  -
+  echo "abc" | md5sum | cut -d ' ' -f 1    # 只取第一段（去掉后面的 " -"）
+  ```
+  - `md5sum` 输出是「32位摘要 + 两个空格 + 文件名」
+  - `cut -d ' ' -f 1` = 用空格作分隔符，取第 1 段
+
+  **④ 解题思路（比命令重要）**
+  ```
+  读脚本 → 找"写到哪里"的规则 → 自己复现这个规则 → 去读那个位置
+  ```
+  这关不需要"提权攻击"，**只需要读懂脚本**——这也是代码审计的基本功。
+
+- **踩坑记录**：
+  - 一开始在查 `cronjob_bandit22`（上一关的配置）→ 注意**当前身份决定了要找哪一关的文件**
+  - `cat /tmp/xxx` 找不到 → 文件名要**自己算**的，不能猜；或等 1 分钟让 cron 跑一次
+  - 忘了 `cut -d ' ' -f 1` → 拿到的字符串后面带 `  -`，路径会错
