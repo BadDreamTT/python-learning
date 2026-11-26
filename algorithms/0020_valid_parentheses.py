@@ -8,7 +8,7 @@
 
 
 def is_valid(s: str) -> bool:
-   st = []
+        st = []
         if len(s) % 2:
             return False
         
