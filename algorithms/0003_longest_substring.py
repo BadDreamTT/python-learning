@@ -9,7 +9,7 @@
 
 
 def length_of_longest_substring(s: str) -> int:
-   seen=set()
+        seen=set()
         left=0
         max_length=0
         for right,char in enumerate(s):
