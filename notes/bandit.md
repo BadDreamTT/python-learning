@@ -621,3 +621,71 @@
   - %04g : %g放数字.04总长度固定位4位不够前面补0
   - seq 0 9999 生成从0到9999
   - $命令:`$(seq ...)`：把 seq 这条命令的输出结果拿出来,交给for循环
+
+## Level 25 → 26
+
+- **目标**：用 bandit26 的私钥登录，但它的 shell 是 `/usr/bin/showtext`（执行 `more ~/text.txt` 后立即退出），需要逃逸出受限 shell
+- **命令**：
+  ```bash
+  # 在 bandit25 上
+  ls                                   # 私钥文件名是 bandit26.sshkey
+  cp bandit26.sshkey /tmp/k26          # home 只读，复制到 /tmp
+  chmod 600 /tmp/k26                   # 原文件属主不是自己，chmod 失败
+  cat /tmp/k26                         # 把私钥内容抄到本地虚拟机保存
+
+  # 在本地虚拟机（不能从服务器 localhost 回连）
+  nano ~/k26 && chmod 600 ~/k26
+  # 先把终端窗口拖小（5~10 行）
+  ssh -i ~/k26 bandit26@bandit.labs.overthewire.org -p 2220
+
+  # 出现 --More-- 后
+  v                                    # 进入 vi
+  :e /etc/bandit_pass/bandit26         # 读密码
+  :q!                                  # 退出
+  ```
+- **密码**：`jHdv3ELQhT22bKMrMNDjybZDAkw1zeBJ`
+- **学到**：
+
+  **① 受限 shell 为什么不安全**
+  ```bash
+  # bandit26 的 shell
+  #!/bin/sh
+  exec more ~/text.txt
+  ```
+  `more` 功能虽小，但**它能按 `v` 调用 vi**——而 vi 能读文件、能开 shell。**限制只挡住了第一条路，没挡住第二条。**
+
+  **② `more` 的逃逸条件**
+  - 内容必须**超过一屏**才会进入交互模式（出现 `--More--`）
+  - 所以要把终端窗口**缩小**，让 more 卡住
+  - 窗口太大 → 一次显示完 → 直接退出，看起来"没反应"
+
+  **③ 私钥权限的两个坑**
+  | 问题 | 原因 | 解决 |
+  |---|---|---|
+  | `chmod` 失败 | 文件属主不是自己 | `cp` 到自己能写的目录再 chmod |
+  | home 目录只读 | 关卡设计（逼迫找可写目录） | `cp` 到 `/tmp` 或 `/dev/shm` |
+  | ssh 报 "permissions too open" | 私钥必须 600 | `chmod 600` |
+
+  **④ 找可写目录的通用命令**
+  ```bash
+  find / -writable -type d 2>/dev/null | head
+  ```
+
+  **⑤ 禁止 localhost 回连**
+  - Bandit 新版本加了限制：`Connecting from/to localhost is blocked`
+  - 必须**从自己的机器**发起 ssh（把私钥复制到本地）
+  - 老教程里的 `ssh bandit26@localhost` 已经失效
+
+- **vi 常用命令速查**
+  | 命令 | 作用 |
+  |---|---|
+  | `:q` / `:q!` | 退出 / 强制退出（E37 就加 `!`） |
+  | `:e 文件` | 打开文件 |
+  | `:r 文件` | 读入文件内容 |
+  | `:set shell=/bin/bash` + `:shell` | 开 shell（经典逃逸） |
+
+- **踩坑记录**：
+  - 文件名不是 `sshkey.private` 而是 `bandit26.sshkey` → **以 `ls` 为准**
+  - home 目录不可写 → 复制到 `/tmp`
+  - 用域名仍被解析成 127.0.0.1 → 被 localhost 规则拦 → 改从本地连
+  - 进了 vi 手滑按 `i` 改动缓冲区 → `:q` 报 E37 → 用 `:q!`
